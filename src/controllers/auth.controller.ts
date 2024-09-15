@@ -1,18 +1,23 @@
 import { NextFunction, Request, Response } from 'express';
 import { Container } from 'typedi';
-import { RequestWithUser } from '@interfaces/auth.interface';
-import { User } from '@interfaces/users.interface';
+import { apiResponseBadRequest, apiResponseCreated, apiResponseOk } from '@utils/apiResponse';
+import { SignupDto } from '@dtos/signup.dto';
+import { LoginDto } from '@dtos/login.dto';
 import { AuthService } from '@services/auth.service';
 
 export class AuthController {
-  public auth = Container.get(AuthService);
+  private authService = Container.get(AuthService);
 
   public signUp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userData: User = req.body;
-      const signUpUserData: User = await this.auth.signup(userData);
+      const signupData = req.body as SignupDto;
+      if (signupData.password !== signupData.password_confirmation) {
+        apiResponseBadRequest(res, 'Password Mismatch');
+      }
 
-      res.status(201).json({ data: signUpUserData, message: 'signup' });
+      const { cookie, data } = await this.authService.signup(signupData);
+      res.setHeader('Set-Cookie', [cookie]);
+      apiResponseCreated(res, 'User signed up successfully', data);
     } catch (error) {
       next(error);
     }
@@ -20,23 +25,23 @@ export class AuthController {
 
   public logIn = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userData: User = req.body;
-      const { cookie, findUser } = await this.auth.login(userData);
+      const userData = req.body as LoginDto;
+      const { cookie, data } = await this.authService.login(userData);
 
       res.setHeader('Set-Cookie', [cookie]);
-      res.status(200).json({ data: findUser, message: 'login' });
+      apiResponseOk(res, 'Login successful', data);
     } catch (error) {
       next(error);
     }
   };
 
-  public logOut = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+  public logOut = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userData: User = req.user;
-      const logOutUserData: User = await this.auth.logout(userData);
+      const userData = req.user;
+      await this.authService.logout(userData);
 
       res.setHeader('Set-Cookie', ['Authorization=; Max-age=0']);
-      res.status(200).json({ data: logOutUserData, message: 'logout' });
+      apiResponseOk(res, 'Logout successful', null);
     } catch (error) {
       next(error);
     }

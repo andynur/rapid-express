@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { hash } from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -15,11 +16,12 @@ async function main() {
   console.log('All tables have been reset.');
 
   // Seed Users
+  const hashedPassword = await hash('qweasd123', 10);
   await prisma.user.create({
     data: {
       name: 'Cooper Rosser',
       email: 'cooper@test.com',
-      password: 'qweasd123',
+      password: hashedPassword,
     },
   });
 
@@ -135,14 +137,14 @@ async function main() {
     orders.map(order =>
       prisma.order.create({
         data: {
-          customerId: order.customerId,
-          totalPrice: order.totalPrice,
-          createdAt: order.createdAt,
+          customer_id: order.customerId,
+          total_price: order.totalPrice,
+          created_at: order.createdAt,
           items: {
             create: order.items.map(item => ({
-              productId: item.productId,
+              product_id: item.productId,
               quantity: item.quantity,
-              totalPrice: item.totalPrice,
+              total_price: item.totalPrice,
             })),
           },
         },

@@ -1,4 +1,4 @@
-import { apiResponseOk } from '@/utils/apiResponse';
+import { apiResponseOk } from '@utils/apiResponse';
 import { NextFunction, Request, Response } from 'express';
 
 export class HomeController {

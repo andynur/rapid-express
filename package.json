@@ -16,7 +16,9 @@
     "prisma:seed": "bun run src/prisma/seed.ts",
     "prisma:generate": "prisma generate",
     "deploy:prod": "bun build && NODE_ENV=production bun run src/server.ts",
-    "deploy:dev": "NODE_ENV=development bun --watch run src/server.ts"
+    "deploy:dev": "NODE_ENV=development bun --watch run src/server.ts",
+    "prepare": "husky",
+    "precommit": "eslint ."
   },
   "prisma": {
     "schema": "src/prisma/schema.prisma"
@@ -58,6 +60,8 @@
     "eslint": "^8.20.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
     "prettier": "^2.7.1",
     "prisma": "^4.1.0"
   }

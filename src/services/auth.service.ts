@@ -1,43 +1,68 @@
-import { PrismaClient } from '@prisma/client';
 import { compare, hash } from 'bcrypt';
 import { sign } from 'jsonwebtoken';
-import { Service } from 'typedi';
+import { Inject, Service } from 'typedi';
 import { SECRET_KEY } from '@config';
-import { CreateUserDto } from '@dtos/users.dto';
-import { HttpException } from '@exceptions/httpException';
+import { SignupDto } from '@dtos/signup.dto';
+import { LoginDto } from '@dtos/login.dto';
+import { HttpException } from '@exceptions/HttpException';
+import { UserRepository } from '@repositories/user.repository';
 import { DataStoredInToken, TokenData } from '@interfaces/auth.interface';
-import { User } from '@interfaces/users.interface';
+import { User } from '@prisma/client';
+import { UserInfo } from '@interfaces/user.interface';
+import { AuthEntity } from '@/entities/auth.entity';
+import { plainToInstance } from 'class-transformer';
 
 @Service()
 export class AuthService {
-  public users = new PrismaClient().user;
+  constructor(@Inject(() => UserRepository) private userRepository: UserRepository) {}
 
-  public async signup(userData: CreateUserDto): Promise<User> {
-    const findUser: User = await this.users.findUnique({ where: { email: userData.email } });
+  public async signup(userData: SignupDto): Promise<{ cookie: string; data: AuthEntity }> {
+    const findUser = await this.userRepository.findByEmail(userData.email);
     if (findUser) throw new HttpException(409, `This email ${userData.email} already exists`);
 
     const hashedPassword = await hash(userData.password, 10);
-    const createUserData: Promise<User> = this.users.create({ data: { ...userData, password: hashedPassword } });
+    const newUser = await this.userRepository.create({
+      name: userData.name,
+      email: userData.email,
+      password: hashedPassword,
+    });
 
-    return createUserData;
+    const tokenData = this.createToken(newUser);
+    const cookie = this.createCookie(tokenData);
+    const data = {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      token: tokenData.token,
+      expires_in: tokenData.expiresIn,
+    };
+
+    return { cookie, data: plainToInstance(AuthEntity, data) };
   }
 
-  public async login(userData: CreateUserDto): Promise<{ cookie: string; findUser: User }> {
-    const findUser: User = await this.users.findUnique({ where: { email: userData.email } });
-    if (!findUser) throw new HttpException(409, `This email ${userData.email} was not found`);
+  public async login(userData: LoginDto): Promise<{ cookie: string; data: AuthEntity }> {
+    const findUser = await this.userRepository.findByEmail(userData.email);
+    if (!findUser) throw new HttpException(401, `Invalid email or password. Please try again.`);
 
     const isPasswordMatching: boolean = await compare(userData.password, findUser.password);
-    if (!isPasswordMatching) throw new HttpException(409, 'Password is not matching');
+    if (!isPasswordMatching) throw new HttpException(401, 'Invalid email or password. Please try again.');
 
     const tokenData = this.createToken(findUser);
     const cookie = this.createCookie(tokenData);
+    const data = {
+      id: findUser.id,
+      name: findUser.name,
+      email: findUser.email,
+      token: tokenData.token,
+      expires_in: tokenData.expiresIn,
+    };
 
-    return { cookie, findUser };
+    return { cookie, data: plainToInstance(AuthEntity, data) };
   }
 
-  public async logout(userData: User): Promise<User> {
-    const findUser: User = await this.users.findFirst({ where: { email: userData.email, password: userData.password } });
-    if (!findUser) throw new HttpException(409, "User doesn't exist");
+  public async logout(userData: UserInfo): Promise<User> {
+    const findUser: User = await this.userRepository.findById(userData.id);
+    if (!findUser) throw new HttpException(404, "User doesn't exist");
 
     return findUser;
   }
@@ -45,9 +70,13 @@ export class AuthService {
   public createToken(user: User): TokenData {
     const dataStoredInToken: DataStoredInToken = { id: user.id };
     const secretKey: string = SECRET_KEY;
-    const expiresIn: number = 60 * 60;
+    const currentTimeInMs = Date.now();
+    const expiresInMs = currentTimeInMs + 24 * 60 * 60 * 1000; // 24 hour
 
-    return { expiresIn, token: sign(dataStoredInToken, secretKey, { expiresIn }) };
+    return {
+      expiresIn: new Date(expiresInMs).toISOString(),
+      token: sign(dataStoredInToken, secretKey, { expiresIn: expiresInMs }),
+    };
   }
 
   public createCookie(tokenData: TokenData): string {

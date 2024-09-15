@@ -8,50 +8,59 @@ generator client {
 }
 
 model User {
-    id       BigInt @id @default(autoincrement())
-    name     String
-    email    String @unique
-    password String
+    id         Int      @id @default(autoincrement())
+    name       String
+    email      String   @unique
+    password   String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
 
     @@map("users")
 }
 
 model Customer {
-    id     BigInt  @id @default(autoincrement())
-    name   String
-    orders Order[]
+    id         Int      @id @default(autoincrement())
+    name       String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    orders     Order[]
 
     @@map("customers")
 }
 
 model Order {
-    id         BigInt      @id @default(autoincrement())
-    customerId BigInt
-    customer   Customer    @relation(fields: [customerId], references: [id])
-    totalPrice Float
-    createdAt  DateTime    @default(now())
-    items      OrderItem[]
+    id          Int         @id @default(autoincrement())
+    customer_id  Int
+    total_price Float
+    created_at  DateTime    @default(now())
+    updated_at  DateTime    @updatedAt
+    customer    Customer    @relation(fields: [customer_id], references: [id])
+    items       OrderItem[]
 
     @@map("orders")
 }
 
 model Product {
-    id    BigInt      @id @default(autoincrement())
-    name  String
-    price Float
-    items OrderItem[]
+    id         Int         @id @default(autoincrement())
+    name       String
+    price      Float
+    created_at DateTime    @default(now())
+    updated_at DateTime    @updatedAt
+    items      OrderItem[]
 
     @@map("products")
 }
 
 model OrderItem {
-    id         BigInt  @id @default(autoincrement())
-    orderId    BigInt
-    order      Order   @relation(fields: [orderId], references: [id])
-    productId  BigInt
-    product    Product @relation(fields: [productId], references: [id])
-    quantity   Int
-    totalPrice Float
+    id          Int      @id @default(autoincrement())
+    order_id    Int
+    product_id  Int
+    quantity    Int
+    total_price Float
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+    order       Order    @relation(fields: [order_id], references: [id])
+    product     Product  @relation(fields: [product_id], references: [id])
 
     @@map("order_items")
 }
