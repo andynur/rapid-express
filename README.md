@@ -95,8 +95,12 @@ Errors in the application are handled using a custom error handler and returned 
 
 To run tests (if configured):
 ```bash
-bun run test
+bun test
 ```
+
+### Postman Documentation
+
+The Postman collection for testing the API endpoints can be found at [Postman Documentation](https://documenter.getpostman.com/view/4776687/2sAXqp9j1T)
 
 ### Original Project
 This project is a fork of the [typescript-express-starter](https://github.com/ljlm0402/typescript-express-starter) repository. It has been customized to use [Bun](https://bun.sh/) for improved performance and a better developer experience
