@@ -12,16 +12,21 @@ import { HttpException } from '@exceptions/HttpException';
  * @param forbidNonWhitelisted If you would rather to have an error thrown when any non-whitelisted properties are present
  */
 export const ValidationMiddleware = (type: any, skipMissingProperties = false, whitelist = false, forbidNonWhitelisted = false) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const dto = plainToInstance(type, req.body);
-    validateOrReject(dto, { skipMissingProperties, whitelist, forbidNonWhitelisted })
-      .then(() => {
-        req.body = dto;
-        next();
-      })
-      .catch((errors: ValidationError[]) => {
-        const message = errors.map((error: ValidationError) => Object.values(error.constraints)).join(', ');
-        next(new HttpException(400, message));
-      });
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Transform the request body into the DTO and apply transformation decorators like @Transform
+      const dto = plainToInstance(type, req.body);
+
+      // Validate the transformed DTO
+      await validateOrReject(dto, { skipMissingProperties, whitelist, forbidNonWhitelisted });
+
+      // If validation passes, replace the request body with the transformed DTO
+      req.body = dto;
+      next();
+    } catch (errors) {
+      // Collect error messages and throw a validation error
+      const message = errors.map((error: ValidationError) => (error.constraints ? Object.values(error.constraints).join(', ') : error.toString()));
+      next(new HttpException(400, message.join(', ')));
+    }
   };
 };

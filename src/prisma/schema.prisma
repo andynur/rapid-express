@@ -20,11 +20,12 @@ model User {
 
 model Customer {
     id         Int      @id @default(autoincrement())
-    name       String
+    name       String   
     created_at DateTime @default(now())
     updated_at DateTime @updatedAt
     orders     Order[]
 
+    @@index([name])
     @@map("customers")
 }
 
@@ -32,11 +33,13 @@ model Order {
     id          Int         @id @default(autoincrement())
     customer_id  Int
     total_price Float
+    order_date  DateTime    @default(now())
     created_at  DateTime    @default(now())
     updated_at  DateTime    @updatedAt
     customer    Customer    @relation(fields: [customer_id], references: [id])
     items       OrderItem[]
 
+    @@index([order_date])
     @@map("orders")
 }
 
@@ -48,6 +51,7 @@ model Product {
     updated_at DateTime    @updatedAt
     items      OrderItem[]
 
+    @@index([name])
     @@map("products")
 }
 
@@ -55,7 +59,7 @@ model OrderItem {
     id          Int      @id @default(autoincrement())
     order_id    Int
     product_id  Int
-    quantity    Int
+    qty    Int
     total_price Float
     created_at  DateTime @default(now())
     updated_at  DateTime @updatedAt
