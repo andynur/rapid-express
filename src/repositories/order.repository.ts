@@ -33,7 +33,18 @@ export class OrderRepository {
     // Get paginated orders
     const orders = await this.prisma.order.findMany({
       where: whereClause,
-      include: this.includeRelations(),
+      include: {
+        customer: {
+          select: {
+            name: true,
+          },
+        },
+        items: {
+          select: {
+            id: true,
+          },
+        },
+      },
       orderBy: {
         [sort_by]: sort_order,
       },
@@ -58,7 +69,14 @@ export class OrderRepository {
   public async findDetailById(orderId: number): Promise<Order | null> {
     return this.prisma.order.findUnique({
       where: { id: orderId },
-      include: this.includeRelations(),
+      include: {
+        customer: true, // Eager loading customer
+        items: {
+          include: {
+            product: true, // Eager loading product details in order items
+          },
+        },
+      },
     });
   }
 
@@ -140,16 +158,5 @@ export class OrderRepository {
     } catch (error) {
       throw new HttpException(500, 'Failed to delete order: ' + error.message);
     }
-  }
-
-  private includeRelations() {
-    return {
-      customer: true, // Eager loading customer
-      items: {
-        include: {
-          product: true, // Eager loading product details in order items
-        },
-      },
-    };
   }
 }

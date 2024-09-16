@@ -6,6 +6,8 @@ import { PaginationMeta } from '@/interfaces/pagination.interface';
 import { HttpException } from '@/exceptions/HttpException';
 import { ProductRepository } from '@/repositories/product.repository';
 import { CustomerRepository } from '@/repositories/customer.repository';
+import { OrderEntity } from '@/entities/order.entity';
+import { plainToInstance } from 'class-transformer';
 
 @Service()
 export class OrderService {
@@ -15,7 +17,7 @@ export class OrderService {
     @Inject(() => CustomerRepository) private customerRepository: CustomerRepository,
   ) {}
 
-  public async findAllOrders(query: OrderListQueryDto): Promise<{ orders: Order[]; meta: PaginationMeta }> {
+  public async findAllOrders(query: OrderListQueryDto): Promise<{ data: OrderEntity[]; meta: PaginationMeta }> {
     const { customer, start_date, end_date, page, limit, sort_by, sort_order } = query;
 
     // Get orders and the total count of orders for pagination
@@ -30,7 +32,21 @@ export class OrderService {
       last_page: last_page,
     };
 
-    return { orders, meta };
+    // format orders entity
+    const data = orders.map(order => {
+      const orderData: OrderEntity = order;
+      return plainToInstance(OrderEntity, {
+        id: order.id,
+        customer_name: orderData.customer.name,
+        total_product: orderData.items.length,
+        total_price: order.total_price,
+        order_date: order.order_date,
+        created_at: order.created_at,
+        updated_at: order.updated_at,
+      });
+    });
+
+    return { data, meta };
   }
 
   public async findOrderById(orderId: number): Promise<Order> {
@@ -73,6 +89,12 @@ export class OrderService {
       if (p.qty < 1) throw new HttpException(400, 'Invalid qty value is less than 1');
       return p.product_id;
     });
+
+    // Validate duplicate product IDs
+    const uniqueProductIds = new Set(productIds);
+    if (productIds.length !== uniqueProductIds.size) {
+      throw new HttpException(400, 'Duplicate product IDs are not allowed');
+    }
 
     // Validate all product IDs exist in the database
     const validProducts = await this.productRepository.findAllInId(productIds);

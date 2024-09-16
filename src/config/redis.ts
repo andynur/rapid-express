@@ -1,15 +1,19 @@
-import { createClient } from 'redis';
+import { logger } from '@/utils/logger';
+import Redis from 'ioredis';
 
-const redisClient = createClient({
-  password: process.env.REDIS_PASSWORD,
-  socket: {
-    host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-  },
+const redis = new Redis({
+  host: process.env.REDIS_HOST, // Default Redis host (localhost)
+  port: parseInt(process.env.REDIS_PORT || '6379', 10), // Default Redis port
+  password: process.env.REDIS_PASSWORD, // Optional: Redis password if authentication is required
+  db: 0,
 });
 
-redisClient.on('error', err => {
-  console.error('Redis Error:', err);
+redis.on('connect', () => {
+  logger.info(`🔥 Connected to Redis on port ${process.env.REDIS_PORT}`);
 });
 
-export { redisClient };
+redis.on('error', err => {
+  console.error('❌ Redis Error:', err);
+});
+
+export default redis;
